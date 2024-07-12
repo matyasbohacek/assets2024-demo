@@ -8,3 +8,7 @@
 <br>
 
 ## Tasks: 
+
+- [ ] ChatPose wrapper
+- [ ] Demo interface
+- [ ] HuggingFace Demos/Spaces Hosting
