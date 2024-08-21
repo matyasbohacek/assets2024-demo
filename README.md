@@ -7,8 +7,33 @@
 
 <br>
 
-## Tasks: 
+## TODOs:
 
-- [ ] ChatPose wrapper
-- [ ] Demo interface
-- [ ] HuggingFace Demos/Spaces Hosting
+### Technical
+
+#### High-priority
+
+- [ ] (Vasek) ChatPose wrapper
+- [ ] (Vasek) Chatting demo interface
+- [ ] (Vasek) show selected key frames in the UI
+
+### Mid-priority
+
+- [ ] (Maty & Vasek) UI, CSS
+- [ ] (Maty & Vasek) HuggingFace Demos/Spaces Hosting
+
+#### Low-priority
+
+- [ ] (Vasek) add more probes and non-manual components to the prompt
+- [ ] (Maty & Vasek) instructions, FAQ
+
+### Paper Writing
+
+- [ ] (Maty) identify questions/discussions to be held at the conference and incorporate them into the conclusion (reviewer #1)
+- [ ] (Maty) change of wording "natural language" -> "written language" (reviewer #2)
+- [ ] (Maty) mention that the feedback may be delivered directly in the form of sign language in the future (reviewer #2)
+- [ ] (Maty) add more probes and non-manual components to the prompt; mention this in the paper (reviewer #2)
+- [ ] (Maty) show selected key frames in the UI; reflect this in the figures (screenshots); mention this in the paper (reviewer #3)
+- [ ] (Maty) clarify pipeline details (reviewer #3)
+- [ ] (Maty) clarify how prompts (questions) were chosen and that there is room for improvement in this regard (reviewer #3)
+- [ ] (Maty) example results, both positive and negative (reviewer #3)
