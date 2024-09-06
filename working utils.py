@@ -369,7 +369,7 @@ def load_i3d_model(
         num_in_frames: int,
 ) -> torch.nn.Module:
     """Load pre-trained I3D checkpoint, put in eval mode."""
-    model = models.InceptionI3d(
+    model = sign_utils.InceptionI3d(
         num_classes=num_classes,
         spatiotemporal_squeeze=True,
         final_endpoint="Logits",
@@ -396,7 +396,7 @@ def load_mstcn_model(
 
 ) -> torch.nn.Module:
     """Load pre-trained MS-TCN checkpoint, put in eval mode."""
-    model = models.MultiStageModel(
+    model = sign_utils.MultiStageModel(
         num_blocks, 
         num_layers, 
         num_f_maps, 
