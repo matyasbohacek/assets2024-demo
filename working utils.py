@@ -540,7 +540,7 @@ def keyframe_extraction(video_path, i3d_checkpoint_path, mstcn_checkpoint_path):
     frames = load(video_path)
 
     highest_prob_frame = frames[highest_prob_ind]
-    save_path = "highest_prob_frame.png"
+    save_path = "/tmp/highest_prob_frame.png"
     cv2.imwrite(save_path, highest_prob_frame)
 
     return save_path
