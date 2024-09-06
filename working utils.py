@@ -521,7 +521,7 @@ def main_mstcn(
         inp = np.swapaxes(inp, 0, 1)
         inp = inp.unsqueeze(0).to(device)
         predictions = model(inp, torch.ones(inp.size(), device=device))
-        pred_prob = list(sm(predictions[-1]).cuda().detach().numpy())[0][1]
+        pred_prob = list(sm(predictions[-1]).cpu().detach().numpy())[0][1]
         predicted = torch.tensor(np.where(np.asarray(pred_prob) > 0.5, 1, 0))
 
         all_preds.extend(torch_to_list(predicted))
