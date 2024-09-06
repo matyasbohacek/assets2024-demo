@@ -272,22 +272,92 @@ def chat_with_model(image_file, text_input, args):
 
 #Sign segmentation
 
-def load_rgb_video(video_path: str, fps: int = 25) -> (torch.Tensor, list):
+def load_rgb_video(video_path: Path, fps: int) -> torch.Tensor:
+    """
+    Load frames of a video using cv2.
+    """
+    cap = cv2.VideoCapture(str(video_path))
+    cap_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    cap_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    cap_fps = cap.get(cv2.CAP_PROP_FPS)
+
+    # cv2 won't be able to change frame rates for all encodings, so we use ffmpeg
+    if cap_fps != fps:
+        tmp_video_path = f"{video_path}.tmp.{video_path.suffix}"
+        shutil.move(video_path, tmp_video_path)
+        cmd = (f"ffmpeg -i {tmp_video_path} -pix_fmt yuv420p "
+               f"-filter:v fps=fps={fps} {video_path}")
+        os.system(cmd)
+        Path(tmp_video_path).unlink()
+        cap = cv2.VideoCapture(str(video_path))
+        cap_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        cap_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        cap_fps = cap.get(cv2.CAP_PROP_FPS)
+        assert cap_fps == fps, f"ffmpeg failed to produce a video at {fps}"
+
+    f = 0
+    rgb = []
+    while True:
+        # frame: BGR, (h, w, 3), dtype=uint8 0..255
+        ret, frame = cap.read()
+        if not ret:
+            break
+        # BGR (OpenCV) to RGB (Torch)
+        frame = frame[:, :, [2, 1, 0]]
+        rgb_t = im_to_torch(frame)
+        rgb.append(rgb_t)
+        f += 1
+    cap.release()
+    # (nframes, 3, cap_height, cap_width) => (3, nframes, cap_height, cap_width)
+    rgb = torch.stack(rgb).permute(1, 0, 2, 3)
+
+    return rgb
+
+def load(video_path: str, fps: int = 25) -> (torch.Tensor, list):
     cap = cv2.VideoCapture(video_path)
-    frames = []
     frame_list = []
-    
+
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
-        frame_list.append(frame)  
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        frame_tensor = torch.from_numpy(frame).permute(2, 0, 1).float() / 255.0
-        frames.append(frame_tensor)
-        
+        frame_list.append(frame)
+
     cap.release()
-    return torch.stack(frames), frame_list
+    return frame_list
+
+
+
+def prepare_input(
+    rgb: torch.Tensor,
+    resize_res: int = 256,
+    inp_res: int = 224,
+    mean: torch.Tensor = 0.5 * torch.ones(3), std=1.0 * torch.ones(3),
+):
+    """
+    Process the video:
+    1) Resize to [resize_res x resize_res]
+    2) Center crop with [inp_res x inp_res]
+    3) Color normalize using mean/std
+    """
+    iC, iF, iH, iW = rgb.shape
+    rgb_resized = np.zeros((iF, resize_res, resize_res, iC))
+    for t in range(iF):
+        tmp = rgb[:, t, :, :]
+        tmp = resize_generic(
+            im_to_numpy(tmp), resize_res, resize_res, interp="bilinear", is_flow=False
+        )
+        rgb_resized[t] = tmp
+    rgb = np.transpose(rgb_resized, (3, 0, 1, 2))
+    # Center crop coords
+    ulx = int((resize_res - inp_res) / 2)
+    uly = int((resize_res - inp_res) / 2)
+    # Crop 256x256
+    rgb = rgb[:, :, uly : uly + inp_res, ulx : ulx + inp_res]
+    rgb = to_torch(rgb).float()
+    assert rgb.max() <= 1
+    rgb = color_normalize(rgb, mean, std)
+    return rgb
 
 
 def load_i3d_model(
@@ -296,7 +366,7 @@ def load_i3d_model(
         num_in_frames: int,
 ) -> torch.nn.Module:
     """Load pre-trained I3D checkpoint, put in eval mode."""
-    model = sign_utils.InceptionI3d(
+    model = models.InceptionI3d(
         num_classes=num_classes,
         spatiotemporal_squeeze=True,
         final_endpoint="Logits",
@@ -306,47 +376,169 @@ def load_i3d_model(
         num_in_frames=num_in_frames,
         include_embds=True,
     )
-    model = torch.nn.DataParallel(model).cuda()
-    checkpoint = torch.load(i3d_checkpoint_path)
+    model = torch.nn.DataParallel(model)
+    checkpoint = torch.load(i3d_checkpoint_path, map_location=torch.device('cuda'))
     model.load_state_dict(checkpoint["state_dict"])
     model.eval()
     return model
 
+def load_mstcn_model(
+        mstcn_checkpoint_path: Path,
+        device,
+        num_blocks: int = 4,
+        num_layers: int = 10,
+        num_f_maps: int = 64,
+        dim: int = 1024,
+        num_classes: int = 2,
 
-def keyframe_extraction(video_path: str, i3d_checkpoint_path: str, num_classes: int, num_in_frames: int, stride: int) -> int:
-    
-    video_frames, original_frames = load_rgb_video(video_path)
+) -> torch.nn.Module:
+    """Load pre-trained MS-TCN checkpoint, put in eval mode."""
+    model = models.MultiStageModel(
+        num_blocks, 
+        num_layers, 
+        num_f_maps, 
+        dim, 
+        num_classes,
+    )
 
-    
-    model = load_i3d_model(i3d_checkpoint_path, num_classes, num_in_frames)
+    model = model.to(device)
+    checkpoint = torch.load(mstcn_checkpoint_path, map_location=torch.device('cuda'))
+    model.load_state_dict(checkpoint)
+    model.eval()
+    return model
 
+def sliding_windows(
+        rgb: torch.Tensor,
+        num_in_frames: int = 1,
+        stride: int = 1,
+) -> tuple:
+    """
+    Return sliding windows and corresponding (middle) timestamp
+    """
+    C, nFrames, H, W = rgb.shape
     
-    C, nFrames, H, W = video_frames.shape[0], video_frames.shape[1], video_frames.shape[2], video_frames.shape[3]
+    # If needed, pad to the minimum clip length
+    if nFrames < num_in_frames:
+        rgb_ = torch.zeros(C, num_in_frames, H, W)
+        rgb_[:, :nFrames] = rgb
+        rgb_[:, nFrames:] = rgb[:, -1].unsqueeze(1)
+        rgb = rgb_
+        nFrames = rgb.shape[1]
+
     num_clips = math.ceil((nFrames - num_in_frames) / stride) + 1
-    max_prob = 0
-    max_prob_frame = 0
+    plural = ""
+    if num_clips > 1:
+        plural = "s"
+
+    rgb_slided = torch.zeros(num_clips, 3, num_in_frames, H, W)
+    t_mid = []
+    # For each clip
+    for j in range(num_clips):
+        # Check if num_clips becomes 0
+        actual_clip_length = min(num_in_frames, nFrames - j * stride)
+        if actual_clip_length == num_in_frames:
+            t_beg = j * stride
+        else:
+            t_beg = nFrames - num_in_frames
+        t_mid.append(t_beg + num_in_frames / 2)
+        rgb_slided[j] = rgb[:, t_beg : t_beg + num_in_frames, :, :]
+    return rgb_slided
+
+
+def main_i3d(
+    i3d_checkpoint_path: Path,
+    video_path: Path,
+    fps: int = 25,
+    num_classes: int = 981,
+    num_in_frames: int = 1,
+    batch_size: int = 1,
+    stride: int = 1,
+):
+    model = load_i3d_model(
+        i3d_checkpoint_path=i3d_checkpoint_path,
+        num_classes=num_classes,
+        num_in_frames=num_in_frames,
+    )
+    rgb_orig = load_rgb_video(
+        video_path=video_path,
+        fps=fps,
+    )
+    # Prepare: resize/crop/normalize
+    rgb_input = prepare_input(rgb_orig)
+    # Sliding window
+    rgb_slides = sliding_windows(
+        rgb=rgb_input,
+        stride=stride,
+        num_in_frames=num_in_frames,
+    )
+    # Number of windows/clips
+    num_clips = rgb_slides.shape[0]
+    # Group the clips into batches
+    num_batches = math.ceil(num_clips / batch_size)
+    all_features = torch.Tensor(num_clips, 1024)
+    all_logits = torch.Tensor(num_clips, num_classes)
+    for b in range(num_batches):
+        inp = rgb_slides[b * batch_size : (b + 1) * batch_size]
+        # Forward pass
+        out = model(inp)
+        logits = out["logits"].data.cuda()
+        all_features[b] = out["embds"].squeeze().data.cuda()
+        all_logits[b] = logits.squeeze().data.cuda()
+    
+    return all_features, all_logits
+
+def main_mstcn(
+    features,
+    logits,
+    mstcn_checkpoint_path: Path,
+):
+
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     
-    for i in range(num_clips):
-        start = i * stride
-        end = start + num_in_frames
-        if end > nFrames:
-            break
-        clip = video_frames[:, start:end, :, :].unsqueeze(0)  
-        with torch.no_grad():
-            logits = model(clip)
-            probs = nn.Softmax(dim=1)(logits["logits"]).cpu().numpy()
+    model = load_mstcn_model(
+        mstcn_checkpoint_path=mstcn_checkpoint_path,
+        device=device
+    )
 
-            
-            max_clip_prob = np.max(probs)
-            if max_clip_prob > max_prob:
-                max_prob = max_clip_prob
-                max_prob_frame = start + np.argmax(probs)
 
-    highest_frame = original_frames[max_prob_frame]
-    output_path = "tmp/highest_prob_frame.png"
-    cv2.imwrite(output_path, highest_frame) 
+    sm = nn.Softmax(dim=1)
 
-    
-    return output_path
+    # Number of windows/clips
+    num_clips = features.shape[0]//100
+    # Group the clips into batches
+    num_batches = math.ceil(num_clips)
+
+    all_preds = []
+    all_probs = []
+
+    for b in range(num_batches+1):
+        inp = features[b * 100 : (b + 1) * 100]
+        inp = np.swapaxes(inp, 0, 1)
+        inp = inp.unsqueeze(0).to(device)
+        predictions = model(inp, torch.ones(inp.size(), device=device))
+        pred_prob = list(sm(predictions[-1]).cuda().detach().numpy())[0][1]
+        predicted = torch.tensor(np.where(np.asarray(pred_prob) > 0.5, 1, 0))
+
+        all_preds.extend(torch_to_list(predicted))
+        all_probs.extend(pred_prob)
+
+    return all_probs
+
+
+def keyframe_extraction(video_path, i3d_checkpoint_path, mstcn_checkpoint_path):
+    features, logits = main_i3d(i3d_checkpoint_path=i3d_checkpoint_path, video_path=video_path)
+    all_probs = main_mstcn(features, logits, mstcn_checkpoint_path)
+    all_probs = [float(val) for val in all_probs]
+    highest_prob = max(all_probs)
+    highest_prob_ind = all_probs.index(highest_prob)
+
+    frames = load(video_path)
+
+    highest_prob_frame = frames[highest_prob_ind]
+    save_path = "highest_prob_frame.png"
+    cv2.imwrite(save_path, highest_prob_frame)
+
+    return save_path
 
