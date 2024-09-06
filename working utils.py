@@ -25,6 +25,9 @@ from tqdm import tqdm
 from io import BytesIO
 from transformers import TextStreamer
 
+import torch.nn as nn
+from signseg_utils import torch_to_list, to_torch, im_to_numpy, im_to_torch, resize_generic, color_normalize
+
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="ChatPose chat")
     
