@@ -536,7 +536,9 @@ def keyframe_extraction(video_path, i3d_checkpoint_path, mstcn_checkpoint_path, 
     all_probs = main_mstcn(features, logits, mstcn_checkpoint_path)
     all_probs = [float(val) for val in all_probs]
     highest_prob = max(all_probs)
+    print(highest_prob)
     highest_prob_ind = all_probs.index(highest_prob)
+    print(highest_prob_ind)
 
     frames = load(video_path)
 
