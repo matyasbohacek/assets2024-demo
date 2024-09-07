@@ -100,7 +100,7 @@ def handle_video(video, sign_choice, chat_history):
     merged_image.save(merged_image_path)
 
     # Call the chat_with_model function
-    overall_assessment, _ = chat_with_model(merged_image_path, "ONLY reply with one of these words: relevant, needs-improvement, or not-relevant! How similar are the sign movements in these two images? NO other text!", args)
+    overall_assessment, _ = chat_with_model(merged_image_path, "ONLY reply with one of these words: relevant, needs-improvement, or not-good! How similar are the sign movements in these two images? NO other text!", args)
     print(f"Overall assessment: {overall_assessment}")
     hand_shape, _ = chat_with_model(merged_image_path, "In one sentence, what gesture/hand shape changes should the person on the left make to match the person on the right?", args)
     print(f"Hand shape: {hand_shape}")
@@ -156,4 +156,153 @@ with gr.Blocks(css=".btn {background-color: #357edd;}",
 
     chat_submit.click(handle_chat_input, inputs=[chat_input, chatbot], outputs=[chatbot])
 
-demo.launch(share=True)
+demo.css += """
+html {
+    background-color: #F5F5F2;
+}
+
+input.svelte-1mhtq7j.svelte-1mhtq7j.svelte-1mhtq7j:checked, input.svelte-1mhtq7j.svelte-1mhtq7j.svelte-1mhtq7j:checked {
+    background-color: #357edd;
+    border-bottom-color: #357edd;
+    border-left-color: #357edd;
+    border-right-color: #357edd;
+    border-top-color: #357edd;
+    color: #357edd;
+}
+
+.svelte-1gfkn6j {
+    font-weight: bold !important;
+}
+
+gradio-app {
+    background:  #F5F5F2 !important;
+    background-color:  #F5F5F2 !important;
+}
+
+body, .gradio-container {
+    background-color: #F5F5F2; /* Light mode background */
+    color: #333333; /* Dark text color */
+    font-family: Helvetica, Arial, sans-serif; /* Set font to Helvetica */
+    font-size: 18px; /* Increase text size */
+}
+
+.built-with {
+    display: none !important; /* Hide bottom panel */
+}
+
+.show-api {
+    display: none !important; /* Hide bottom panel */
+}
+
+button, input, textarea, select {
+    font-family: Helvetica, Arial, sans-serif; /* Ensure all inputs use Helvetica */
+}
+
+.gr-button {
+    background-color: #357edd; /* Matte blue button background */
+    color: white; /* White text for contrast */
+    font-weight: bold; /* Bold font for buttons */
+    border: none; /* Remove borders */
+    border-radius: 4px; /* Slightly rounded corners for modern look */
+}
+
+.gr-button:hover {
+    background-color: #78a498; /* Darker matte blue on hover */
+}
+
+.gr-textbox, .gr-slider, .gr-checkbox, .gr-dropdown {
+    border: 1px solid #357edd; /* Matte blue borders */
+    border-radius: 4px; /* Rounded corners */
+}
+
+.gr-title, .gr-subtitle {
+    font-weight: bold; /* Bold titles */
+    color: #357edd; /* Matte blue titles */
+}
+
+.container-spec {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin: auto;
+}
+.assessment {
+    padding: 20px;
+    font-size: 1.4em; /* Increase font size */
+    border-radius: 10px;
+    color: white;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: bold; /* Bold text */
+}
+.relevant {
+    background-color: #357edd;
+    color: #fff !important;
+}
+.needs-improvement {
+    background-color: #ff7f0e;
+    color: white !important;
+}
+.not-relevant {
+    background-color: #EE4266;
+}
+.check-mark {
+    font-size: 2em;
+}
+.prose h1 {
+    color: #357edd;
+    font-size: 3em !important;
+    margin-top: -20px;
+}
+.prose p {
+    font-size: 1.2em !important;
+}
+.reasoning {
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    font-size: 1.2em; /* Increase font size */
+}
+.chat-button {
+    height: 100% !important;
+}
+/* Ensure the text field and button have the same height */
+.gr-textbox, .chat-button {
+    height: 50px; /* Set the height to match */
+    line-height: 50px; /* Align text vertically */
+}
+
+/* Ensure the button background matches the theme */
+.gr-button, .chat-button {
+    background-color: #357edd; /* Matte blue button background */
+    color: white; /* White text for contrast */
+    font-weight: bold; /* Bold font for buttons */
+    border: none; /* Remove borders */
+    border-radius: 4px; /* Slightly rounded corners for modern look */
+}
+
+/* Hover effect for buttons */
+.gr-button:hover, .chat-button:hover {
+    background-color: #1E5CAE; /* Darker matte blue on hover */
+}
+.chat-button {
+    height: auto !important;
+    padding: 0;
+}
+
+.gr-textbox, .gr-button {
+    height: 50px; /* Adjust the height value as needed */
+    line-height: 50px; /* Match this with the height to vertically center the text */
+}
+
+input[type="text"] {
+    padding: 0 10px; /* Ensure text is not cut off */
+    height: 50px; /* Match the button's height */
+    line-height: 50px;
+    margin-top: -5px !important;
+}"""
+
+demo.launch(share=True, allowed_paths=["workspace/"])
