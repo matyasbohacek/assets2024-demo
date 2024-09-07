@@ -86,11 +86,9 @@ def handle_video(video, sign_choice, chat_history):
     args = parse_args()
     i3d_checkpoint_path = "sign_utils/i3d/i3d_kinetics_bslcp.pth.tar"
     mstcn_checkpoint_path = "sign_utils/ms-tcn/mstcn_bslcp_i3d_bslcp.model"
-    num_classes = 981  
-    num_in_frames = 16  
-    stride = 1  
+    save_path = "./tmp/highest_prob.png"
     # Extract a random frame from the uploaded video
-    user_key_frame_path = keyframe_extraction(video, i3d_checkpoint_path, mstcn_checkpoint_path)
+    user_key_frame_path = keyframe_extraction(video, i3d_checkpoint_path, mstcn_checkpoint_path, save_path)
 
     # Load the reference image
     reference_image = load_image(reference_image_url)
