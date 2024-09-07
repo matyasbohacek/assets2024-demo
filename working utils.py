@@ -7,7 +7,7 @@ import requests
 import math
 from pathlib import Path
 import sign_utils
-
+import shutil
 import cv2
 import numpy as np
 import torch
@@ -286,6 +286,7 @@ def load_rgb_video(video_path: Path, fps: int) -> torch.Tensor:
 
     # cv2 won't be able to change frame rates for all encodings, so we use ffmpeg
     if cap_fps != fps:
+        video_path = Path(video_path)
         tmp_video_path = f"{video_path}.tmp.{video_path.suffix}"
         shutil.move(video_path, tmp_video_path)
         cmd = (f"ffmpeg -i {tmp_video_path} -pix_fmt yuv420p "
@@ -530,7 +531,7 @@ def main_mstcn(
     return all_probs
 
 
-def keyframe_extraction(video_path, i3d_checkpoint_path, mstcn_checkpoint_path):
+def keyframe_extraction(video_path, i3d_checkpoint_path, mstcn_checkpoint_path, save_path):
     features, logits = main_i3d(i3d_checkpoint_path=i3d_checkpoint_path, video_path=video_path)
     all_probs = main_mstcn(features, logits, mstcn_checkpoint_path)
     all_probs = [float(val) for val in all_probs]
@@ -540,8 +541,7 @@ def keyframe_extraction(video_path, i3d_checkpoint_path, mstcn_checkpoint_path):
     frames = load(video_path)
 
     highest_prob_frame = frames[highest_prob_ind]
-    save_path = "./tmp/highest_prob_frame.png"
+    save_path = save_path
     cv2.imwrite(save_path, highest_prob_frame)
 
     return save_path
-
