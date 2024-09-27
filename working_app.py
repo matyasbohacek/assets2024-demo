@@ -87,17 +87,29 @@ def handle_video(video, sign_choice, chat_history):
     i3d_checkpoint_path = "sign_utils/i3d/i3d_kinetics_bslcp.pth.tar"
     mstcn_checkpoint_path = "sign_utils/ms-tcn/mstcn_bslcp_i3d_bslcp.model"
     save_path = "./tmp/highest_prob.png"
-    # Extract a random frame from the uploaded video
-    user_key_frame_path = keyframe_extraction(video, i3d_checkpoint_path, mstcn_checkpoint_path, save_path)
+    os.makedirs("./tmp", exist_ok=True)
 
-    # Load the reference image
+    # Extract a key frame from the uploaded video
+    user_key_frame_path = keyframe_extraction(
+        video, i3d_checkpoint_path, mstcn_checkpoint_path, save_path
+    )
+
+    # Load the reference image and user's key frame
     reference_image = load_image(reference_image_url)
     user_key_frame = load_image(user_key_frame_path)
 
+    # Debug: Check image types
+    print(f"user_key_frame type: {type(user_key_frame)}")
+    print(f"reference_image type: {type(reference_image)}")
+
     # Merge the images side by side
     merged_image = merge_images(user_key_frame, reference_image)
-    merged_image_path = "/tmp/merged_image.png"
-    merged_image.save(merged_image_path)
+    merged_image_path = "./tmp/merged_image.png"
+
+    try:
+        merged_image.save(merged_image_path)
+    except Exception as e:
+        print(f"Error saving merged image: {e}")
 
     # Call the chat_with_model function
     overall_assessment, _ = chat_with_model(merged_image_path, "ONLY reply with one of these words: relevant, needs-improvement, or not-good! How similar are the sign movements in these two images? NO other text!", args)
