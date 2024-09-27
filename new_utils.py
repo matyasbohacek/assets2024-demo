@@ -25,3 +25,32 @@ def upload_and_delete_image(image_path):
     # Delete the image
 cloudinary.uploader.destroy(public_id)
 print("Image deleted successfully.")
+
+def get_middle_frame(video_path):
+    # Open the video file
+    cap = cv2.VideoCapture(video_path)
+
+    # Check if video opened successfully
+    if not cap.isOpened():
+        raise IOError("Error opening video file.")
+
+    # Get the total number of frames
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    # Calculate the index of the middle frame
+    middle_frame_index = (total_frames - 1) // 2
+
+    # Set the position of the next read
+    cap.set(cv2.CAP_PROP_POS_FRAMES, middle_frame_index)
+
+    # Read the middle frame
+    ret, frame = cap.read()
+
+    # Release the video capture object
+    cap.release()
+
+    # Check if frame reading was successful
+    if not ret:
+        raise ValueError("Error reading the middle frame.")
+
+    return frame
