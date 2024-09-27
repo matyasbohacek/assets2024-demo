@@ -135,7 +135,7 @@ def handle_chat_input(chat_input, chat_history):
 
     args = parse_args()
     # Placeholder: Simulate a conversation response using the model
-    response, _ = chat_with_model("/tmp/merged_image.png", chat_input, args)
+    response, _ = chat_with_model("./tmp/merged_image.png", chat_input, args)
     chat_history.append((chat_input, response))
     return chat_history
 
