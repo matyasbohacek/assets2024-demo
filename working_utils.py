@@ -26,7 +26,6 @@ from io import BytesIO
 from transformers import TextStreamer
 
 import torch.nn as nn
-from signseg_utils import torch_to_list, to_torch, im_to_numpy, im_to_torch, resize_generic, color_normalize
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="ChatPose chat")
@@ -124,6 +123,7 @@ def chat_with_model(image_file, text_input, args):
         args.vis_save_path = f"./vis_output/{save_name}"
     os.makedirs(args.vis_save_path, exist_ok=True)
 
+    # Create tokenizer
     tokenizer = AutoTokenizer.from_pretrained(
         args.version,
         cache_dir=None,
@@ -132,7 +132,20 @@ def chat_with_model(image_file, text_input, args):
         use_fast=False,
     )
     tokenizer.pad_token = tokenizer.unk_token
-    args.seg_token_idx = tokenizer("[SEG]", add_special_tokens=False).input_ids[0]
+
+    # Add special tokens to the tokenizer
+    special_tokens_dict = {
+        'additional_special_tokens': [
+            DEFAULT_IM_START_TOKEN,
+            DEFAULT_IM_END_TOKEN,
+            DEFAULT_IMAGE_TOKEN,
+            '[SEG]',
+            '[SEG_END]'
+        ]
+    }
+    num_added_toks = tokenizer.add_special_tokens(special_tokens_dict)
+    tokenizer_vocab_size = len(tokenizer)
+    args.seg_token_idx = tokenizer.convert_tokens_to_ids("[SEG]")
 
     torch_dtype = torch.float32
     if args.precision == "bf16":
@@ -169,9 +182,18 @@ def chat_with_model(image_file, text_input, args):
                 ),
             }
         )
+
+    # Load model after tokenizer is updated
     model = ChatPoseForCausalLM.from_pretrained(
-        args.version, low_cpu_mem_usage=True, vision_tower=args.vision_tower, seg_token_idx=args.seg_token_idx, **kwargs
+        args.version,
+        low_cpu_mem_usage=True,
+        vision_tower=args.vision_tower,
+        seg_token_idx=args.seg_token_idx,
+        **kwargs
     )
+
+    # Resize model embeddings after adding special tokens
+    model.resize_token_embeddings(tokenizer_vocab_size)
 
     model.config.eos_token_id = tokenizer.eos_token_id
     model.config.bos_token_id = tokenizer.bos_token_id
@@ -180,7 +202,7 @@ def chat_with_model(image_file, text_input, args):
     model.get_model().initialize_vision_modules(model.get_model().config)
     vision_tower = model.get_model().get_vision_tower()
     vision_tower.to(dtype=torch_dtype)
-    
+
     if args.precision == "bf16":
         model = model.bfloat16().cuda()
     elif (
@@ -211,13 +233,14 @@ def chat_with_model(image_file, text_input, args):
     if not os.path.exists(image_file):
         return "Image File not found, use ChatPose without image input", None
 
+    # Load and preprocess the image
     image_np = cv2.imread(image_file)
     image_np = cv2.cvtColor(image_np, cv2.COLOR_BGR2RGB)
     original_size_list = [image_np.shape[:2]]
+
+    # Preprocess for the vision tower
     image_clip = (
-        clip_image_processor.preprocess(image_np, return_tensors="pt")[
-            "pixel_values"
-        ][0]
+        clip_image_processor.preprocess(image_np, return_tensors="pt")["pixel_values"][0]
         .unsqueeze(0)
         .cuda()
     )
@@ -227,9 +250,14 @@ def chat_with_model(image_file, text_input, args):
         image_clip = image_clip.half()
     else:
         image_clip = image_clip.float()
-    image = image_clip.clone()
-    image = F.interpolate(image.float(), size=[256,256], mode='bilinear', align_corners=False).to(image_clip.dtype)
 
+    # Prepare the image for other processing (e.g., resizing)
+    image = image_clip.clone()
+    image = F.interpolate(
+        image.float(), size=[256, 256], mode='bilinear', align_corners=False
+    ).to(image_clip.dtype)
+
+    # Initialize the conversation
     conv = conversation_lib.conv_templates[args.conv_type].copy()
     conv.messages = []
     roles = conv.roles
@@ -238,20 +266,21 @@ def chat_with_model(image_file, text_input, args):
     answers = []
     visualizations = []
 
+    # Prepare the prompt using the correct special tokens
     prompt = text_input
-    prompt = "[IMAGE]\n" + prompt
+    prompt = DEFAULT_IMAGE_TOKEN + "\n" + prompt
     if args.use_mm_start_end:
-        replace_token = "[IM_START][IMAGE][IM_END]"
-        prompt = prompt.replace("[IMAGE]", replace_token)
-        conv.append_message(conv.roles[0], prompt)
+        replace_token = DEFAULT_IM_START_TOKEN + DEFAULT_IMAGE_TOKEN + DEFAULT_IM_END_TOKEN
+        prompt = prompt.replace(DEFAULT_IMAGE_TOKEN, replace_token)
+    conv.append_message(conv.roles[0], prompt)
 
     conv.append_message(conv.roles[1], None)
     prompt = conv.get_prompt()
 
-    input_ids = tokenizer_image_token(prompt, tokenizer, return_tensors="pt")
-    input_ids = input_ids.unsqueeze(0).cuda()
-    streamer = TextStreamer(tokenizer, skip_prompt=True, skip_special_tokens=True)
-    
+    # Tokenize the prompt
+    input_ids = tokenizer.encode(prompt, return_tensors="pt").cuda()
+
+    # Generate the response
     output_ids, predictions, pred_smpl_params = model.evaluate(
         image_clip,
         image,
@@ -260,6 +289,8 @@ def chat_with_model(image_file, text_input, args):
         tokenizer=tokenizer,
         return_smpl=True,
     )
+
+    # Decode the output
     output_ids = output_ids[0, input_ids.shape[1]:]
     text_output = tokenizer.decode(output_ids, skip_special_tokens=False).strip().replace("</s>", "")
     text_output = text_output.replace("[SEG] ", "[POSE]").replace("[SEG]", "[POSE]")
@@ -267,6 +298,7 @@ def chat_with_model(image_file, text_input, args):
     answers.append(text_output)
     visualizations.append(predictions)
 
+    # Save the visualization
     imagename = os.path.basename(image_file)
     save_path = os.path.join(args.vis_save_path, imagename)
     visualize_LLM(save_path, questions, answers, visualizations)
