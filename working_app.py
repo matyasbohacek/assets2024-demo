@@ -9,7 +9,7 @@ import torch
 from working_utils import chat_with_model
 from working_utils import load_image
 from working_utils import parse_args
-from working_utils import keyframe_extraction
+import os
 
 # EXAMPLES should now only hold reference images and videos
 examples = [
@@ -24,8 +24,7 @@ EXAMPLES = {
     "mid": examples[2]
 }
 
-def generate_html_analysis(overall_assessment, reasoning_handshape, reasoning_movement,
-                           image_path_1, image_path_2):
+def generate_html_analysis(overall_assessment, reasoning_handshape, reasoning_movement, sign):
     # Determine the class and symbol based on the overall assessment
     if "relevant" in overall_assessment:
         assessment_class = "KEEP IT UP!"
@@ -33,7 +32,7 @@ def generate_html_analysis(overall_assessment, reasoning_handshape, reasoning_mo
         check_movement = True
         symbol = "✓"
         color = "#78a498"
-    elif "need" in overall_assessment and "improvement" in overall_assessment:
+    elif "need" or "Need" in overall_assessment and "improvement" in overall_assessment:
         assessment_class = "needs-improvement"
         check_handshape = False
         check_movement = True
@@ -45,6 +44,11 @@ def generate_html_analysis(overall_assessment, reasoning_handshape, reasoning_mo
         check_movement = False
         symbol = "✗"
         color = "#EE4266"
+
+    print(f"Image 1 path: assets/PoseGPT/tmp/highest_prob.png")
+    path_sign = f"tmp/{sign}"
+    print(path_sign)
+
 
     # Create HTML structure
     html_output = f"""
@@ -59,8 +63,8 @@ def generate_html_analysis(overall_assessment, reasoning_handshape, reasoning_mo
             <strong>Hand Movement:</strong> <span>{"LOOKS GOOD" if check_movement else "LET'S IMPROVE THIS"} <br><br> {reasoning_movement}</span>
         </div>
         <div class="image-container" style="display: flex; justify-content: space-between;">
-            <img src="{image_path_1}" alt="Image 1" style="width: 48%; border-radius: 10px;">
-            <img src="{image_path_2}" alt="Image 2" style="width: 48%; border-radius: 10px;">
+            <img src="/file=tmp/highest_prob.png" alt="Image 1" style="width: 48%; border-radius: 10px;">
+            <img src="/file={path_sign}" alt="Image 2" style="width: 48%; border-radius: 10px;">
         </div>
     </div>
     """
@@ -68,63 +72,94 @@ def generate_html_analysis(overall_assessment, reasoning_handshape, reasoning_mo
     return html_output
 
 
+def extract_middle_frame(video_path, output_image_path):
+    # Open the video file
+    cap = cv2.VideoCapture(video_path)
+    
+    # Get the total number of frames
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    
+    # Calculate the middle frame index
+    middle_frame_index = total_frames // 2
+    
+    # Set the position of the video to the middle frame
+    cap.set(cv2.CAP_PROP_POS_FRAMES, middle_frame_index)
+    
+    # Read the middle frame
+    ret, frame = cap.read()
+    
+    # If the frame was successfully read, save it as an image
+    if ret:
+        cv2.imwrite(output_image_path, frame)
+        print(f"Middle frame saved as {output_image_path}")
+    else:
+        print("Failed to extract frame")
+    
+    # Release the video capture object
+    cap.release()
 
-def merge_images(image1, image2):
-    widths, heights = zip(*(i.size for i in [image1, image2]))
-    total_width = sum(widths)
-    max_height = max(heights)
+    return output_image_path
 
-    merged_image = Image.new('RGB', (total_width, max_height))
-    merged_image.paste(image1, (0, 0))
-    merged_image.paste(image2, (image1.width, 0))
 
-    return merged_image
+
+def merge_images(image1, image2, output_path):
+    # Resize both images to 512x512
+    target_size = (512, 512)
+    image1_resized = image1.resize(target_size)
+    image2_resized = image2.resize(target_size)
+
+    # Convert PIL Images to OpenCV format
+    image1_cv = cv2.cvtColor(np.array(image1_resized), cv2.COLOR_RGB2BGR)
+    image2_cv = cv2.cvtColor(np.array(image2_resized), cv2.COLOR_RGB2BGR)
+
+    # Get dimensions (they will both be 512x512)
+    height, width, _ = image1_cv.shape
+
+    # Create a blank image with double the width
+    total_width = width * 2
+    merged_image = np.zeros((height, total_width, 3), dtype=np.uint8)
+
+    # Place the first image on the left
+    merged_image[0:height, 0:width] = image1_cv
+
+    # Place the second image on the right
+    merged_image[0:height, width:total_width] = image2_cv
+
+    # Save the merged image using OpenCV
+    cv2.imwrite(output_path, merged_image)
+
+    print(f"Merged image saved at {output_path}")
 
 def handle_video(video, sign_choice, chat_history):
     reference_image_url, reference_video_path = EXAMPLES[sign_choice]
-
+    sign = os.path.basename(reference_image_url)
     args = parse_args()
-    i3d_checkpoint_path = "sign_utils/i3d/i3d_kinetics_bslcp.pth.tar"
-    mstcn_checkpoint_path = "sign_utils/ms-tcn/mstcn_bslcp_i3d_bslcp.model"
+    
+    
     save_path = "./tmp/highest_prob.png"
-    os.makedirs("./tmp", exist_ok=True)
-
-    # Extract a key frame from the uploaded video
-    user_key_frame_path = keyframe_extraction(
-        video, i3d_checkpoint_path, mstcn_checkpoint_path, save_path
-    )
-
-    # Load the reference image and user's key frame
+    
+    
+    user_key_frame_path = extract_middle_frame(video, save_path)
+    # Load the reference image
     reference_image = load_image(reference_image_url)
     user_key_frame = load_image(user_key_frame_path)
-
-    # Debug: Check image types
-    print(f"user_key_frame type: {type(user_key_frame)}")
-    print(f"reference_image type: {type(reference_image)}")
-
-    # Merge the images side by side
-    merged_image = merge_images(user_key_frame, reference_image)
     merged_image_path = "./tmp/merged_image.png"
-
-    try:
-        merged_image.save(merged_image_path)
-    except Exception as e:
-        print(f"Error saving merged image: {e}")
+    # Merge the images side by side
+    merged_image = merge_images(user_key_frame, reference_image, merged_image_path)
 
     # Call the chat_with_model function
-    overall_assessment, _ = chat_with_model(merged_image_path, "ONLY reply with one of these words: relevant, needs-improvement, or not-good! How similar are the sign movements in these two images? NO other text!", args)
+    overall_assessment, _ = chat_with_model(merged_image_path, "Using only one of these words — relevant, needs-improvement, or not-good — indicate how similar the handshapes are in the two images. Do not include any other text.", args)
     print(f"Overall assessment: {overall_assessment}")
-    hand_shape, _ = chat_with_model(merged_image_path, "In one sentence, what gesture/hand shape changes should the person on the left make to match the person on the right?", args)
+    hand_shape, _ = chat_with_model(merged_image_path, "In one clear sentence, describe exactly how the person on the left should adjust their hand(s) to replicate the handshape of the person on the right.", args)
     print(f"Hand shape: {hand_shape}")
-    hand_movement, _ = chat_with_model(merged_image_path, "In one sentence, how should the person on the left position her hands to look like the person on the right", args)
+    hand_movement, _ = chat_with_model(merged_image_path, "In one clear sentence, describe precisely how the person on the left should position and move her hand(s) to replicate the hand movement of the person on the right.", args)
     print(f"Hand movement: {hand_movement}")
     # Generate the HTML content
     html_content = generate_html_analysis(
         overall_assessment,  # LLM generated assessment 
         hand_shape,  
         hand_movement,  
-        merged_image_path,  # First image path (merged image)
-        reference_image_url  # Second image path (reference image)
+        sign
     )
 
     chat_history.clear()  # Reset chat history as per the original requirement
@@ -135,7 +170,7 @@ def handle_chat_input(chat_input, chat_history):
 
     args = parse_args()
     # Placeholder: Simulate a conversation response using the model
-    response, _ = chat_with_model("./tmp/merged_image.png", chat_input, args)
+    response, _ = chat_with_model("/tmp/merged_image.png", chat_input, args)
     chat_history.append((chat_input, response))
     return chat_history
 
@@ -317,4 +352,4 @@ input[type="text"] {
     margin-top: -5px !important;
 }"""
 
-demo.launch(share=True, allowed_paths=["workspace/"])
+demo.launch(share=True, allowed_paths=["."])
