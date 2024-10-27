@@ -13,15 +13,28 @@ Sign language learners often find it challenging to self-identify and correct mi
 
 ## Getting Started
 
-1. Set up a Python environment (Python 3.9 is recommended) and install the dependencies using `pip install -r requirements.txt`. Alternatively, create the environment using `conda env create -f environment.yml`.
+1. Clone this repo using `git clone https://github.com/matyasbohacek/assets2024-demo.git`.
 
-2. clone PoseGPT repo in `.` using: `git clone https://github.com/yfeng95/PoseGPT`
+2. Move to the `assets2024-demo` directory and set up a Python environment (Python 3.9 is recommended). You can create the environment from scratch or using `conda env create -f environment.yml`.
 
-3. in PoseGPT repo Folder run 'bash fetch_data.sh'
+3. Install required packages:
 
-4. Clone Sign segmentation model to the `.`: `git clone https://github.com/RenzKa/sign-segmentation`
+```shell
+apt-get update 
+sudo apt-get install ffmpeg
+sudo apt-get install unzip
+```
 
-5. Move neceassary files: 
+4. (If you created your Conda environment from the yaml file, you can skip this step.) Install Python dependencies using `pip install -r requirements.txt`.
+
+5. In `assets2024-demo`, clone the [PoseGPT repo](https://github.com/yfeng95/PoseGP) using `git clone https://github.com/yfeng95/PoseGPT`.
+
+6. Move to the PoseGPT directory (`cd PoseGPT`) and run `bash fetch_data.sh`.
+
+7. Return back to the `assets2024-demo` folder (`cd ..`) and clone the MS-TCN sign segmentation model using `git clone https://github.com/RenzKa/sign-segmentation`.
+
+8. Move neceassary files:
+
 ```shell
 mv sign-segmentation/demo/models PoseGPT/
 mv PoseGPT/models PoseGPT/sign_utils
@@ -29,24 +42,14 @@ mv sign-segmentation/demo/utils_demo.py PoseGPT/
 mv PoseGPT/utils_demo.py PoseGPT/signseg_utils.py
 ```
 
-6. Run this to change gcc and g++ versions:
+6. This may not be necessaty, but we found that some machines require additional setup of the gcc and g++ versions:
+
 ```shell
 find ./assets/PoseGPT/ -type f -exec sed -i 's/gcc-7/gcc-11/g' {} +
 find ./assets/PoseGPT/ -type f -exec sed -i 's/g++-7/g++-11/g' {} +
 ```
 
-7. Install neccasary libraries:
-```shell
-apt-get update 
-sudo apt-get install ffmpeg
-sudo apt-get install unzip
-```
-
-8. Install necessary models from sign-segmentation repo `https://github.com/RenzKa/sign-segmentation` and place them in `./sign-segmentation/models`
-
-
-
-
+7. Finally, install necessary models from the `sign-segmentation` repo `https://github.com/RenzKa/sign-segmentation` and place them in `./sign-segmentation/models`.
 
 ## Citation
 
