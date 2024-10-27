@@ -51,8 +51,7 @@ find ./assets/PoseGPT/ -type f -exec sed -i 's/g++-7/g++-11/g' {} +
 
 7. Finally, install necessary models from the `sign-segmentation` repo `https://github.com/RenzKa/sign-segmentation` and place them in `./sign-segmentation/models`.
 
-
-## Configuration
+## Customization
 
 **Key Frame Identification.** Our pipeline identifies key frames in the student and reference sign videos. This can be done using the MS-TCN sign segmentation backbone (*Renz et al.*). While this usually works, we found that this solution sometimes leads to incorrect results, especially with unseen signs. An alternative solution can be to use the middle frame of each video, which we found to be effective in most cases.
 
