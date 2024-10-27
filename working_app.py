@@ -19,9 +19,9 @@ examples = [
 ]
 
 EXAMPLES = {
-    "bad": examples[0],
-    "great": examples[1],
-    "mid": examples[2]
+    "hello": ("./examples/mid.png", ""),
+    "think": ("./examples/THINK.png", ""),
+    "phone": ("./examples/PHONE.png", "")
 }
 
 def generate_html_analysis(overall_assessment, reasoning_handshape, reasoning_movement, sign):
@@ -182,7 +182,7 @@ with gr.Blocks(css=".btn {background-color: #357edd;}",
 
     with gr.Row():
         with gr.Column():
-            sign_choice = gr.Dropdown(label="Choose a Sign to Perform", choices=["bad", "great", "mid"])
+            sign_choice = gr.Dropdown(label="Choose a Sign to Perform", choices=["hello", "think", "phone"])
             video_input = gr.Video(label="Upload Sign Language Video")
             submit_button = gr.Button("Submit Video", elem_id="submit-button")
         with gr.Column():
