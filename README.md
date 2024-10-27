@@ -40,6 +40,7 @@ mv sign-segmentation/demo/models PoseGPT/
 mv PoseGPT/models PoseGPT/sign_utils
 mv sign-segmentation/demo/utils_demo.py PoseGPT/
 mv PoseGPT/utils_demo.py PoseGPT/signseg_utils.py
+mv tmp PoseGPT/
 ```
 
 6. This may not be necessaty, but we found that some machines require additional setup of the gcc and g++ versions:
