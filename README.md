@@ -81,7 +81,7 @@ find ./assets/PoseGPT/ -type f -exec sed -i 's/g++-7/g++-11/g' {} +
 
 **LLM Backbone.** Our implementation utilizes the PoseGPT LLM (*Feng et al.*). However, it could be replaced by any multimodal LLM that can process text prompts and images and effectively comment on poses.
 
-**Reference Selection.** We provide three reference example signs: hello, phone, and think. You can modify these by adding reference frames in the `PoseGPT/tmp` folder and marking these signs in the `working_app.py` dictionary on lines ``.
+**Reference Selection.** We provide three reference example signs: hello, phone, and think. You can modify these by adding reference frames in the `PoseGPT/tmp` folder and marking these signs in the `working_app.py` dictionary on lines `14 - 18`.
 
 ## Citation
 
