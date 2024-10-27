@@ -74,7 +74,7 @@ find ./assets/PoseGPT/ -type f -exec sed -i 's/gcc-7/gcc-11/g' {} +
 find ./assets/PoseGPT/ -type f -exec sed -i 's/g++-7/g++-11/g' {} +
 ```
 
-7. Finally, install necessary models from the `sign-segmentation` repo and place them in `./sign-segmentation/models`.
+7. Finally, install necessary models from the `sign-segmentation` repo following [these instructions](https://github.com/RenzKa/sign-segmentation?tab=readme-ov-file#data-and-models) and place them in `./sign-segmentation/models`.
 
 ## Customization
 
