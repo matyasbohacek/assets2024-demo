@@ -10,13 +10,6 @@ from working_utils import chat_with_model, load_image, parse_args # Import speci
 #from working_utils import chat_with_model, load_image, parse_args, keyframe_extraction # only if using sign-segmentation
 import os
 
-# Reference images and videos for comparison in the app
-examples = [
-    ("./examples/bad.png", "./examples/bad.mp4"),
-    ("./examples/great.png", "./examples/great.mp4"),
-    ("./examples/mid.png", "./examples/mid.mp4"),
-]
-
 # Specific examples for different signs
 EXAMPLES = {
     "hello": ("./examples/HELLO.png", ""),
