@@ -1,4 +1,3 @@
-
 ![example-interaction](https://github.com/user-attachments/assets/638656a5-3091-48bc-b813-fe63ecbf57aa)
 
 # Pose-aware Large Language Model Interface for Providing Feedback to Sign Language Learners
