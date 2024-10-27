@@ -9,7 +9,7 @@ Sign language learners often find it challenging to self-identify and correct mi
 
 > [See paper](https://dl.acm.org/doi/10.1145/3663548.3688515) — [See poster]() — [Contact us](mailto:maty-at-stanford-dot-edu)
 > 
-> _Published at ASSETS 2024_
+> _Published at the ACM ASSETS 2024 conference_
 
 ## Getting Started
 
