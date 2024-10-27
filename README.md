@@ -40,4 +40,4 @@ Sign language learners often find it challenging to self-identify and correct mi
 
 ## Remarks & Updates
 
-- (**October 28, 2024**) The work is presented at ASSETS as a demo!
+- (**October 28, 2024**) The work is presented at ASSETS 2024 as a demo!
