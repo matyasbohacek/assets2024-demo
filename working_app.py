@@ -6,7 +6,8 @@ import numpy as np
 import random
 from io import BytesIO
 import torch
-from working_utils import chat_with_model, load_image, parse_args  # Import specific utility functions
+from working_utils import chat_with_model, load_image, parse_args # Import specific utility functions
+#from working_utils import chat_with_model, load_image, parse_args, keyframe_extraction # only if using sign-segmentation
 import os
 
 # Reference images and videos for comparison in the app
@@ -110,9 +111,14 @@ def handle_video(video, sign_choice, chat_history):
     reference_image_url, reference_video_path = EXAMPLES[sign_choice]
     sign = os.path.basename(reference_image_url)
     args = parse_args()
+
+    #models for sign-segmentation
+    # i3d = "./sign-segmentation/models/i3d/i3d_kinetics_bslcp.pth.tar"
+    # ms-tcn = "./sign-segmentation/models/ms-tcn/mstcn_bslcp_i3d_bslcp.model"
     
     # Extract middle frame from user video
     user_key_frame_path = extract_middle_frame(video, "./tmp/highest_prob.png")
+    #user_key_frame_path = keyframe_extraction(video, i3d, ms-tcn, "./tmp/highest_prob.png") # only if using sign-segmentation 
     reference_image = load_image(reference_image_url)
     user_key_frame = load_image(user_key_frame_path)
     
