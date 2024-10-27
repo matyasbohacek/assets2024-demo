@@ -45,7 +45,7 @@ def generate_html_analysis(overall_assessment, reasoning_handshape, reasoning_mo
         symbol = "✗"
         color = "#EE4266"
 
-    print(f"Image 1 path: assets/PoseGPT/tmp/highest_prob.png")
+    print(f"Image 1 path: PoseGPT/tmp/highest_prob.png")
     path_sign = f"tmp/{sign}"
     print(path_sign)
 
