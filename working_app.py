@@ -19,7 +19,7 @@ examples = [
 ]
 
 EXAMPLES = {
-    "hello": ("./examples/mid.png", ""),
+    "hello": ("./examples/HELLO.png", ""),
     "think": ("./examples/THINK.png", ""),
     "phone": ("./examples/PHONE.png", "")
 }
