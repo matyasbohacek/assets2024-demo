@@ -15,11 +15,15 @@ Sign language learners often find it challenging to self-identify and correct mi
 
 1. Clone this repo:
 
-```git clone https://github.com/matyasbohacek/assets2024-demo.git```
+```shell
+git clone https://github.com/matyasbohacek/assets2024-demo.git
+```
 
 2. In the `assets2024-demo` directory, set up a Python environment (Python 3.9 is recommended); you can create the environment from scratch or using:
 
-```conda env create -f environment.yml```
+```shell
+conda env create -f environment.yml
+```
 
 3. Install required packages:
 
@@ -31,19 +35,27 @@ sudo apt-get install unzip
 
 4. If you created your Conda environment from the yaml file, you can skip this step; otherwise, install Python dependencies using:
 
-```pip install -r requirements.txt```
+```shell
+pip install -r requirements.txt
+```
 
 5. In the `assets2024-demo` directory, clone the [PoseGPT repo](https://github.com/yfeng95/PoseGP) using:
 
-```git clone https://github.com/yfeng95/PoseGPT```
+```shell
+git clone https://github.com/yfeng95/PoseGPT
+```
 
 6. In the `PoseGPT` directory, run:
 
-```cd PoseGPT && bash fetch_data.sh```
+```shell
+cd PoseGPT && bash fetch_data.sh
+```
 
 7. Back in the `assets2024-demo` directory, clone the [MS-TCN sign segmentation model](https://github.com/RenzKa/sign-segmentation) using:
 
-```git clone https://github.com/RenzKa/sign-segmentation```
+```shell
+git clone https://github.com/RenzKa/sign-segmentation
+```
 
 8. Move neceassary files:
 
