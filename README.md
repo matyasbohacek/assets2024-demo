@@ -2,7 +2,7 @@
 
 # Pose-aware Large Language Model Interface for Providing Feedback to Sign Language Learners
 
-#### [Vaclav Knapp](https://www.linkedin.com/in/václav-knapp-7696b624a/) and [Matyas Bohacek](https://www.matyasbohacek.com)
+#### [Vaclav Knapp](https://vaclavknapp.github.io) and [Matyas Bohacek](https://www.matyasbohacek.com)
 
 Sign language learners often find it challenging to self-identify and correct mistakes, and so many turn to automated methods that provide sign language feedback. However, they find that existing methods either require specialized equipment or lack robustness. They, therefore, have to seek human tutors or give up on the inquiry altogether. To overcome the barriers in accessibility and robustness, we build a large language model (LLM)-based tool for that provide feedback to sign language learners. The tool can analyze videos from diverse camera and background settings without specialized equipment thanks to a sign language segmentation and keyframe identification model. Using a pose-aware LLM, the tool can then produce feedback in written language. We present our tool as a demo web application, opening its implementation into specialized learning applications.
 
